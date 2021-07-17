@@ -59,11 +59,13 @@ EB_basin3 <- inner_join(EB_basin2, basin_size, by = "basin_ID") %>%
 
 ### Effect factor
 # EF_marginal = slope @ current state
-# EF_average = average between 1.2 and 4.5
+# EF_average = average between CT and 4.5
+
+CT <- 1.041 # From GlobalCF.R
 
 EF_basin <- EB_basin3 %>%
   mutate(Marginal = EB_1.5/1.5,
-         Average = (EB_4.5-(EB_1.5/1.5*1.2))/(4.5-1.2)) %>%
+         Average = (EB_4.5-(EB_1.5/1.5*CT))/(4.5-CT)) %>%
   transmute(Marginal = Marginal,
             Average = ifelse(Average>0, Average, 0))
 EF_basin$Marginal[is.nan(EF_basin$Marginal)]<- NA
@@ -80,30 +82,31 @@ Ma_EF_Wm <- sum(EF_basin3$Marginal_W, na.rm = T)/sum(EF_basin3$total_area)
 Av_EF_Wm <- sum(EF_basin3$Average_W, na.rm = T)/sum(EF_basin3$total_area)
 
 #### Results
-cat("Reported ranges for the effect factors per river basins are:")
-cat(scientific(range(EF_basin$Average, na.rm = T), digits = 3), "PDF/°C for the average approach")
-cat(scientific(range(EF_basin$Marginal, na.rm = T), digits = 3), "PDF/°C for the marginal approach")
-cat("Mean values are:")
-cat(scientific(mean(EF_basin$Average, na.rm = T), digits = 3), "PDF/°C for the average approach")
-cat(scientific(mean(EF_basin$Marginal, na.rm = T), digits = 3), "PDF/°C for the marginal approach")
-cat("Weighted arithmetic mean values by river basin size are:")
-cat(scientific(Av_EF_Wm, digits = 3), "PDF/°C for the average approach")
-cat(scientific(Ma_EF_Wm, digits = 3), "PDF/°C for the marginal approach")
-cat("Median values are:")
-cat(scientific(median(EF_basin$Average, na.rm = T), digits = 3), "PDF/°C for the average approach")
-cat(scientific(median(EF_basin$Marginal, na.rm = T), digits = 3), "PDF/°C for the marginal approach")
+cat("Reported ranges for the effect factors per river basins are:\n")
+cat(scientific(range(EF_basin$Average, na.rm = T), digits = 3), "PDF/°C for the average approach\n")
+cat(scientific(range(EF_basin$Marginal, na.rm = T), digits = 3), "PDF/°C for the marginal approach\n")
+cat("Mean values are:\n")
+cat(scientific(mean(EF_basin$Average, na.rm = T), digits = 3), "PDF/°C for the average approach\n")
+cat(scientific(mean(EF_basin$Marginal, na.rm = T), digits = 3), "PDF/°C for the marginal approach\n")
+cat("Weighted arithmetic mean values by river basin size are:\n")
+cat(scientific(Av_EF_Wm, digits = 3), "PDF/°C for the average approach\n")
+cat(scientific(Ma_EF_Wm, digits = 3), "PDF/°C for the marginal approach\n")
+cat("Median values are:\n")
+cat(scientific(median(EF_basin$Average, na.rm = T), digits = 3), "PDF/°C for the average approach\n")
+cat(scientific(median(EF_basin$Marginal, na.rm = T), digits = 3), "PDF/°C for the marginal approach\n")
 
 basins <- nrow(EF_basin2)
-
 NA_A <- sum(is.na(EF_basin2$Average))/basins*100
 NA_M <- sum(is.na(EF_basin2$Marginal))/basins*100
 Z_A <- length(which(EF_basin2$Average==0))/sum(!is.na(EF_basin2$Average))*100
 Z_M <- length(which(EF_basin2$Marginal==0))/sum(!is.na(EF_basin2$Marginal))*100
+total_basins <- basins - sum(is.na(EF_basin2$Average | EF_basin2$Marginal))
 
 cat("It was not possible to derive effect factors for each river basin. For the average approach,", round(NA_A,digits=1),
-    "% has a missing value, and for the marginal approach this is", round(NA_M,digits=1),"%.")
+    "% has a missing value, and for the marginal approach this is", round(NA_M,digits=1),"%.\n")
 cat("From the basins which have an effect factor,", round(Z_A, digits = 1), "% and", round(Z_M, digits=1), "% have an 
-    effect factor of zero (average and marginal approach respectively).")
+    effect factor of zero (average and marginal approach respectively).\n")
+cat("Number of basins for which at least one type of effect factor is calculated:", total_basins)
 
 ### Plots
 
@@ -116,13 +119,16 @@ plot_a <- ggplot() +
                        end = 0.9,
                        direction = -1,
                        breaks = seq(0, 0.2, by = 0.02),
-                       labels = c(0.00, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.80),
+                       labels = c("0.00", "0.02", "0.04", "0.06", "0.08", "0.10", "0.12", "0.14","0.16", "0.18", "0.80"),
                        limits = c(0,0.2)) +
-  theme(text = element_text(size = 12),
+  theme(text = element_text(size = 10),
         panel.background = element_rect(fill = "white"),
         legend.position = "none",
-        legend.key.width = unit(2, 'cm'),
-        legend.title = element_blank())
+        legend.key.width = unit(1.7, 'cm'),
+        legend.title = element_blank(),
+        legend.text=element_text(size=10),
+        axis.text=element_text(size=10),
+        plot.margin=unit(c(0,0,0,0),units='cm'))
 
 plot_m <- ggplot() + 
   geom_sf(data = EF_basin2, aes(geometry = geom, fill = Marginal), lwd = 0) +
@@ -131,22 +137,73 @@ plot_m <- ggplot() +
                        end = 0.9,
                        direction = -1,
                        breaks = seq(0, 0.2, by = 0.02),
-                       labels = c(0.00, 0.02, 0.04, 0.06, 0.08, 0.10, 0.12, 0.14, 0.16, 0.18, 0.80),
+                       labels = c("0.00", "0.02", "0.04", "0.06", "0.08", "0.10", "0.12", "0.14","0.16", "0.18", "0.80"),
                        limits = c(0,0.2),
                        oob = squish) +
-  theme(text = element_text(size = 12),
+  theme(text = element_text(size = 10),
         panel.background = element_rect(fill = "white"),
         legend.position = "none",
-        legend.key.width = unit(2, 'cm'),
-        legend.title = element_blank())
+        legend.key.width = unit(1.7, 'cm'),
+        legend.title = element_blank(),
+        legend.text=element_text(size=10),
+        axis.text=element_text(size=10),
+        plot.margin=unit(c(0,0,0,0),units='cm'))
 
-Fig4 <- ggarrange(plot_a, plot_m,
-                  labels = c("Average", "Marginal"),
+Fig3 <- ggarrange(plot_a, plot_m,
+                  labels = c("A", "M"),
                   font.label = list(size = 10),
                   ncol = 1, nrow = 2,
-                  common.legend = TRUE, legend="bottom")
-  
-ggsave(path = "Figures/", filename = "Fig4.png",Fig4, dpi = 800)
+                  hjust = -2,
+                  common.legend = TRUE, legend="bottom") +
+  theme(plot.margin=unit(c(0,0,0,0),units='cm'))
+Fig3   
+ggsave(path = "Figures/", filename = "Fig3.png",Fig3, dpi = 800, width = 180, height = 140, unit = 'mm')
 
+### PP
+plot_a2 <- ggplot() + 
+  geom_sf(data = EF_basin2, aes(geometry = geom, fill = Average), lwd = 0) +
+  scale_fill_viridis_c(option = 'D', na.value = "grey", 
+                       begin = 0,
+                       end = 0.9,
+                       direction = -1,
+                       breaks = seq(0, 0.2, by = 0.02),
+                       labels = c("0.00", "0.02", "0.04", "0.06", "0.08", "0.10", "0.12", "0.14","0.16", "0.18", "0.80"),
+                       limits = c(0,0.2)) +
+  theme(text = element_text(size = 20),
+        panel.background = element_rect(fill = "white"),
+        legend.key.width = unit(50, 'mm'),
+        legend.position = "none",
+        legend.title = element_blank(),
+        legend.text=element_text(size=18),
+        axis.text=element_text(size=16),
+        plot.margin=unit(c(0,0,0,0),units='cm'))
+
+plot_m2 <- ggplot() + 
+  geom_sf(data = EF_basin2, aes(geometry = geom, fill = Marginal), lwd = 0) +
+  scale_fill_viridis_c(option = 'D', na.value = "grey", 
+                       begin = 0,
+                       end = 0.9,
+                       direction = -1,
+                       breaks = seq(0, 0.2, by = 0.02),
+                       labels = c("0.00", "0.02", "0.04", "0.06", "0.08", "0.10", "0.12", "0.14","0.16", "0.18", "0.80"),
+                       limits = c(0,0.2),
+                       oob = squish) +
+  theme(text = element_text(size = 20),
+        panel.background = element_rect(fill = "white"),
+        legend.key.width = unit(50, 'mm'),
+        legend.position = "none",
+        legend.title = element_blank(),
+        legend.text=element_text(size=18),
+        axis.text=element_text(size=16),
+        plot.margin=unit(c(0,0,0,0),units='cm'))
+
+Fig32 <- ggarrange(plot_a2, plot_m2,
+                  labels = c("A", "M"),
+                  font.label = list(size = 18),
+                  ncol = 1, nrow = 2,
+                  hjust = -2,
+                  common.legend = TRUE, legend="bottom")
+Fig32   
+ggsave(path = "PP/", filename = "Fig32.png",Fig32, dpi = 600, height = 19, width = 33, unit = 'cm')
 
 
